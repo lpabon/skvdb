@@ -1,5 +1,6 @@
 /*
-Copyright 2019 Isabella Pabón <isabella@chrysalix.org>
+From github.com/libopenstorage/openstorage
+Copyright 2019 Portworx
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,12 +17,21 @@ limitations under the License.
 package skvdb
 
 import (
-	"github.com/lpabon/lputils/tests"
-	"testing"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func TestSkvdbNew(t *testing.T) {
-	a := New()
-	tests.Assert(t, a != nil)
-	tests.Assert(t, len(a.db) == 0)
+// IsErrorNotFound returns if the given error is due to not found
+func IsErrorNotFound(err error) bool {
+	return FromError(err).Code() == codes.NotFound
+}
+
+func FromError(err error) *status.Status {
+	// From github.com/grpc-ecosystem/grpc-gateway/runtime/errors.go
+	s, ok := status.FromError(err)
+	if !ok {
+		s = status.New(codes.Unknown, err.Error())
+	}
+
+	return s
 }

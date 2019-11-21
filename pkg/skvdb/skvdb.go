@@ -18,44 +18,50 @@ package skvdb
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// Skvdb is a simple interface to a secure kvdb
 type Skvdb interface {
-	Set(ctx context.Context, key []byte, value []byte) error
-	Get(ctx context.Context, key []byte) ([]byte, error)
+	Set(ctx context.Context, key, value string) error
+	Get(ctx context.Context, key string) (string, error)
 }
 
+// The following is a very simple in-memory implementation that serves
+// only as an example. For a better implementation, the library
+// github.com/portworx/kvdb could be used.
+
+// Element stores the user information
 type Element struct {
-	Value []byte
+	Value string
 	Owner string
 }
 
-type skdvb struct {
+type SkvdbMem struct {
 	lock sync.Mutex
-	db map[string]*Value
+	db   map[string]*Element
 }
 
-func New() Skvdb {
-	return &skdvb{
-		db: make(map[string]*Value),
+// New returns a new secure skvdb
+func New() *SkvdbMem{
+	return &SkvdbMem{
+		db: make(map[string]*Element),
 	}
 }
 
-func (s *skdvb) Set(ctx context.Context, key, value string) error  {
+func (s *SkvdbMem) Set(ctx context.Context, key, value string) error {
 
 	// Get the key first to check if it exists and to check for permission
-	_, found, err := get(ctx, key) 
-	if err != nil {
+	_, err := s.Get(ctx, key)
+	if !IsErrorNotFound(err) && err != nil {
 		return err
 	}
 
 	// Get user information from context
-	username, ok := getUser(ctx)
+	username, ok := GetUser(ctx)
 	if !ok {
 		return status.Errorf(codes.Internal, "Unable to determine user information")
 	}
@@ -74,28 +80,27 @@ func (s *skdvb) Set(ctx context.Context, key, value string) error  {
 	return nil
 }
 
-func (s *skdvb) Get(ctx context.Context, key string) (string, error)  {
-	// Save element to database
+func (s *SkvdbMem) Get(ctx context.Context, key string) (string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-		// Check permission
-		username, ok := getUser(ctx)
-		if !ok {
+	// Check permission
+	username, ok := GetUser(ctx)
+	if !ok {
 		return "", status.Errorf(codes.Internal, "Unable to determine user information")
-		}
+	}
 
+	// Check if the key is there
 	if e, ok := s.db[key]; !ok {
+		// Key is not there
 		return "", status.Errorf(codes.NotFound, "Key %s was not found", key)
 	} else {
+		// Check owner of the key
 		if e.Owner != username {
 			return "", status.Errorf(codes.PermissionDenied, "Access denied to key %s", key)
 		}
-	}
-	
-	return nil, nil
-}
 
-func getUser(ctx context.Context) (string, bool) {
-	return ctx.Value("username").(string)
+		// Return the value
+		return e.Value, nil
+	}
 }
