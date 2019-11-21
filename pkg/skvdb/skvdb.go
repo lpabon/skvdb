@@ -13,12 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package skvdb
 
 import (
+	"context"
 	"fmt"
 )
 
-func main() {
-	fmt.Println("Hi Dad")
+type Skvdb interface {
+	Set(ctx context.Context, key []byte, value []byte) error
+	Get(ctx context.Context, key []byte) ([]byte, error)
+}
+
+type skdvb struct {
+	db map[string]string
+}
+
+func New() Skvdb {
+	return &skdvb{
+		db: make(map[string]string),
+	}
+
+}
+
+func (s *skdvb) Set(ctx context.Context, key []byte, value []byte) error  {
+	return fmt.Errorf("not done yet")
+	
+}
+
+func (s *skdvb) Get(ctx context.Context, key []byte) ([]byte, error)  {
+	return nil, nil 
+	
 }

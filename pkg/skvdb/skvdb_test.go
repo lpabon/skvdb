@@ -13,12 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package skvdb
 
 import (
-	"fmt"
+	"github.com/lpabon/lputils/tests"
+	"testing"
+	"context"
 )
 
-func main() {
-	fmt.Println("Hi Dad")
+func TestSkvdbInit(t *testing.T) {
+	a:=New()
+	err := a.Set(context.Background(),nil,nil)
+	tests.Assert(t,err == nil, err.Error())
 }
