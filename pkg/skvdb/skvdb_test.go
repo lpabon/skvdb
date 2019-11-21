@@ -16,12 +16,44 @@ limitations under the License.
 package skvdb
 
 import (
-	"github.com/lpabon/lputils/tests"
+	"google.golang.org/grpc/codes"
+	"context"
 	"testing"
+
+	"github.com/lpabon/lputils/tests"
 )
 
 func TestSkvdbNew(t *testing.T) {
 	a := New()
 	tests.Assert(t, a != nil)
 	tests.Assert(t, len(a.db) == 0)
+}
+
+func TestSkvdb(t *testing.T) {
+	ctx := SetUser(context.Background(), "user1")
+	badctx := SetUser(context.Background(), "user2")
+
+	a := New()
+	err := a.Set(ctx, "key", "val")
+	tests.Assert(t, err == nil)
+	v, err := a.Get(ctx, "key")
+	tests.Assert(t, err == nil)
+	tests.Assert(t, v == "val")
+
+	err = a.Set(ctx, "key", "anotherval")
+	tests.Assert(t, err == nil)
+	v, err = a.Get(ctx, "key")
+	tests.Assert(t, err == nil)
+	tests.Assert(t, v == "anotherval")
+
+	err = a.Set(badctx, "key", "aaa")
+	tests.Assert(t, err != nil)
+	s := FromError(err)
+	tests.Assert(t, s.Code() == codes.PermissionDenied)
+
+	v, err = a.Get(badctx, "key")
+	tests.Assert(t, err != nil)
+	s = FromError(err)
+	tests.Assert(t, s.Code() == codes.PermissionDenied)
+
 }
